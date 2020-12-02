@@ -1,0 +1,105 @@
+Условие :
+
+Схема БД состоит из четырех таблиц:
+Product(maker, model, type)
+PC(code, model, speed, ram, hd, cd, price)
+Laptop(code, model, speed, ram, hd, price, screen)
+Printer(code, model, color, type, price)
+Таблица Product представляет производителя (maker), номер модели (model) и тип ('PC' - ПК, 'Laptop' - ПК-блокнот или 'Printer' - принтер). Предполагается, что номера моделей в таблице Product уникальны для всех производителей и типов продуктов. В таблице PC для каждого ПК, однозначно определяемого уникальным кодом – code, указаны модель – model (внешний ключ к таблице Product), скорость - speed (процессора в мегагерцах), объем памяти - ram (в мегабайтах), размер диска - hd (в гигабайтах), скорость считывающего устройства - cd (например, '4x') и цена - price. Таблица Laptop аналогична таблице РС за исключением того, что вместо скорости CD содержит размер экрана -screen (в дюймах). В таблице Printer для каждой модели принтера указывается, является ли он цветным - color ('y', если цветной), тип принтера - type (лазерный – 'Laser', струйный – 'Jet' или матричный – 'Matrix') и цена - price.
+
+Задача № 20
+Найдите производителей, выпускающих по меньшей мере три различных модели ПК. Вывести: Maker, число моделей ПК.
+
+РЕШЕНИЕ:
+Select maker, count (model) as count_model
+from product  where type = 'PC'
+group by maker
+having count (model) >2
+
+
+Задача № 21
+Найдите максимальную цену ПК, выпускаемых каждым производителем, у которого есть модели в таблице PC.
+Вывести: maker, максимальная цена.
+
+РЕШЕНИЕ:
+Select maker, max (price) as max_price
+from product join PC on PC.model = product.model
+group by maker
+
+
+Задача № 22
+Для каждого значения скорости ПК, превышающего 600 МГц, определите среднюю цену ПК с такой же скоростью. Вывести: speed, средняя цена.
+
+РЕШЕНИЕ:
+Select speed, avg (price) as avg_price
+from pc where speed > 600 group by speed
+
+
+Задача № 23
+Найдите производителей, которые производили бы как ПК
+со скоростью не менее 750 МГц, так и ПК-блокноты со скоростью не менее 750 МГц.
+Вывести: Maker
+
+РЕШЕНИЕ:
+Select distinct maker
+from product
+inner join PC on PC.model = Product.model
+where PC.speed >=750
+and maker in (select maker
+from product
+inner join Laptop on Laptop.model = Product.model
+where Laptop.speed >=750)
+
+
+Задача №24:
+Перечислите номера моделей любых типов, имеющих самую высокую цену по всей имеющейся в базе данных продукции.
+
+РЕШЕНИЕ: 
+
+select model from (
+select model, price from pc where pc.price = (select max(price) from pc)
+union
+select model, price from laptop where laptop.price = (select max(price) from laptop)
+union
+select model, price from printer where printer.price = (select max(price) from printer)
+) as a
+where a.price = (select max (price)from (
+select model, price from pc where pc.price = (select max(price) from pc)
+union
+select model, price from laptop where laptop.price = (select max(price) from laptop)
+union
+select model, price from printer where printer.price = (select max(price) from printer)
+) as b)
+
+ЗАДАЧА №25:
+Найдите производителей принтеров, которые производят ПК с наименьшим объемом RAM и с самым быстрым процессором среди всех ПК, имеющих наименьший объем RAM. Вывести: Maker
+
+РЕШЕНИЕ:
+
+SELECT distinct product.maker FROM product WHERE product.type='Printer'  
+INTERSECT 
+SELECT distinct product.maker FROM product INNER JOIN pc ON pc.model=product.model  
+WHERE product.type='PC' AND pc.ram=(SELECT MIN(ram) FROM pc)  
+AND pc.speed = (SELECT MAX(speed) FROM (SELECT distinct speed FROM pc 
+WHERE pc.ram=(SELECT MIN(ram) FROM pc)) as A)
+
+
+ЗАДЧА №26:
+Найдите среднюю цену ПК и ПК-блокнотов, выпущенных производителем A (латинская буква). Вывести: одна общая средняя цена.
+
+РЕШЕНИЕ:
+
+select AVG (p.price) from (
+select price from pc join product on pc.model = product.model
+where maker = 'A'
+union all
+select price from laptop join product on laptop.model = product.model
+where maker = 'A' ) as p
+
+ЗАДАЧА №27:
+Найдите средний размер диска ПК каждого из тех производителей, которые выпускают и принтеры. Вывести: maker, средний размер HD.
+
+РЕШЕНИЕ:
+select maker, avg (hd) as avg_hd
+from product join pc on product.model = pc.model where maker in (select maker from product where type = 'printer')
+group by maker
